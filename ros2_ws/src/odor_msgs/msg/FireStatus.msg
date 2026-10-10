@@ -1,12 +1,14 @@
 # 화재 감지기(ess_01) 상태. fire_detect 가 /fire/<id>/status 로 1 Hz 발행한다.
-# 감시 대상: 소형 ESS(파워뱅크) 충전 중 과열. 센서 3종: 표면온도(AMG8833), 주변 온습도(SHT31), 연기(MQ-2)
+# 감시 대상: 소형 ESS(파워뱅크) 충전 중 과열. 센서: 표면온도(AMG8833 열화상, 보조로 DS18B20 접촉 프로브와
+# MLX90614 적외선), 주변 온습도(SHT31), 연기(MQ-2). 접촉 프로브, 적외선 값은 이 메시지에 없고(감지기 CSV 기록)
+# 판정(level)과 flags 에만 들어간다
 
 std_msgs/Header header      # stamp: 판정 시각(UTC), frame_id: 장비 ID (ess_01)
 
-uint8 LEVEL_NORMAL  = 0     # 정상: 주변보다 뜨거운 화소 없음. 녹색 LED
-uint8 LEVEL_CAUTION = 1     # 주의: 뜨거운 화소 1~2개 (국부 발열). 황색 LED
+uint8 LEVEL_NORMAL  = 0     # 정상: 주변보다 뜨거운 화소도, 뜨거운 점 센서도 없음. 녹색 LED
+uint8 LEVEL_CAUTION = 1     # 주의: 뜨거운 화소 1~2개 (국부 발열), 또는 접촉 프로브나 적외선이 뜨거움. 황색 LED
 uint8 LEVEL_WARNING = 2     # 경고: 뜨거운 화소 3개 이상 (번지는 중). 적색 점멸, 부저 간헐
-uint8 LEVEL_DANGER  = 3     # 위험: 연기 또는 절대 한계 초과. 적색 상시, 부저 연속, 충전 차단
+uint8 LEVEL_DANGER  = 3     # 위험: 연기, 또는 화소나 점 센서가 절대 한계 초과. 적색 상시, 부저 연속, 충전 차단
 
 uint8   level               # 위 LEVEL_* 4 단계 (0 정상 ~ 3 위험)
 bool    latched             # 위험 단계가 걸려 사람이 해제할 때까지 유지되는 중
@@ -36,5 +38,7 @@ uint16 FLAG_SMOKE_WARMUP  = 1      # bit0  MQ-2 예열 중이라 연기 판정�
 uint16 FLAG_AMG_INVALID   = 2      # bit1  열화상 읽기 실패
 uint16 FLAG_SHT_INVALID   = 4      # bit2  온습도 읽기 실패 (주변 온도 대신 화소 최저값 사용)
 uint16 FLAG_ADC_INVALID   = 8      # bit3  연기 ADC 읽기 실패
+uint16 FLAG_PROBE_INVALID = 16     # bit4  접촉 프로브(DS18B20) 중 못 읽은 것이 있음
+uint16 FLAG_IR_INVALID    = 32     # bit5  적외선 온도계(MLX90614) 읽기 실패
 uint16 FLAG_TIME_UNSYNCED = 64     # bit6  시각을 믿을 수 없음
 uint16 FLAG_SIMULATED     = 2048   # bit11 가짜 데이터

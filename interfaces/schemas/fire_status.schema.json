@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/selim-drone-proj/moving-ver/interfaces/schemas/fire_status.schema.json",
   "title": "FireStatus",
-  "description": "화재 감지기(ess_01) 상태. fire_detect 가 /fire/<id>/status 로 1 Hz 발행한다. 감시 대상: 소형 ESS(파워뱅크) 충전 중 과열. 센서 3종: 표면온도(AMG8833), 주변 온습도(SHT31), 연기(MQ-2)",
+  "description": "화재 감지기(ess_01) 상태. fire_detect 가 /fire/<id>/status 로 1 Hz 발행한다. 감시 대상: 소형 ESS(파워뱅크) 충전 중 과열. 센서: 표면온도(AMG8833 열화상, 보조로 DS18B20 접촉 프로브와 MLX90614 적외선), 주변 온습도(SHT31), 연기(MQ-2). 접촉 프로브, 적외선 값은 이 메시지에 없고(감지기 CSV 기록) 판정(level)과 flags 에만 들어간다",
   "type": "object",
   "properties": {
     "type": {
@@ -135,7 +135,7 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 65535,
-      "description": "아래 비트. bit6, bit11 은 GasReading 과 같은 뜻 | 비트: 1=SMOKE_WARMUP, 2=AMG_INVALID, 4=SHT_INVALID, 8=ADC_INVALID, 64=TIME_UNSYNCED, 2048=SIMULATED"
+      "description": "아래 비트. bit6, bit11 은 GasReading 과 같은 뜻 | 비트: 1=SMOKE_WARMUP, 2=AMG_INVALID, 4=SHT_INVALID, 8=ADC_INVALID, 16=PROBE_INVALID, 32=IR_INVALID, 64=TIME_UNSYNCED, 2048=SIMULATED"
     },
     "thermal_c": {
       "type": "array",
@@ -302,7 +302,7 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 65535,
-          "description": "아래 비트. bit6, bit11 은 GasReading 과 같은 뜻 | 비트: 1=SMOKE_WARMUP, 2=AMG_INVALID, 4=SHT_INVALID, 8=ADC_INVALID, 64=TIME_UNSYNCED, 2048=SIMULATED"
+          "description": "아래 비트. bit6, bit11 은 GasReading 과 같은 뜻 | 비트: 1=SMOKE_WARMUP, 2=AMG_INVALID, 4=SHT_INVALID, 8=ADC_INVALID, 16=PROBE_INVALID, 32=IR_INVALID, 64=TIME_UNSYNCED, 2048=SIMULATED"
         },
         "thermal_c": {
           "type": "array",
