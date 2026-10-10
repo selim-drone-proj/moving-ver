@@ -1,0 +1,48 @@
+# 이동형 악취 센서 mob_01 (드론 octo_01 탑재) 설정
+# real.launch.py, fake.launch.py 가 읽는다. 바꾼 뒤 colcon build 다시 (또는 params:=<이 파일 경로>)
+#
+# I2C 배치 (TCA9548A 0x70 채널)
+#   ch0 Gravity NH3 0x74 | ch1 Gravity H2S 0x74 | ch2 SGP30 0x58 | ch3 BME688 0x76
+# 센서가 빠져 있으면 *_enabled: false. Gravity 주소를 딥스위치로 다르게 했다면 tca_address: -1
+
+/**:
+  ros__parameters:
+    drone_id: octo_01        # fc_state_node, fake_fc_node, odor_sample_node
+    device_id: mob_01        # gas_i2c_node, gas_sensor_node, fake_gas_node
+
+gas_i2c_node:
+  ros__parameters:
+    i2c_bus: 1
+    rate_hz: 1.0
+    health_period_s: 10.0
+    tca_address: 0x70
+    nh3_enabled: true
+    nh3_address: 0x74
+    nh3_channel: 0
+    h2s_enabled: true
+    h2s_address: 0x74
+    h2s_channel: 1
+    sgp30_enabled: true
+    sgp30_channel: 2
+    bme688_enabled: true
+    bme688_address: 0x76     # 결선 도면 기준. 안 되면 0x77 도 자동으로 시도
+    bme688_channel: 3
+    gravity_settle_s: 0.1
+    warmup_s: 180.0
+    temp_comp: ""            # 제조사 온도 보정. "NH3" 처럼 적으면 적용 (DATA_SPEC.md 4.2 주의 사항)
+    retry_s: 30.0
+
+gas_sensor_node:             # gas:=serial 일 때만
+  ros__parameters:
+    port: /dev/ttyUSB0
+    baud: 115200
+
+fake_fc_node:
+  ros__parameters:
+    center_lat: 35.8242      # 시험 현장 좌표로 바꿀 것
+    center_lon: 127.1480
+
+csv_logger_node:
+  ros__parameters:
+    log_dir: ~/odor_logs
+    write_jsonl: true

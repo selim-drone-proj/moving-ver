@@ -1,0 +1,19 @@
+# --- ROS 2 colcon 빌드 산출물 (소스가 아니므로 올리지 않는다) ---
+build/
+install/
+log/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# --- 비행 로그 (csv_logger_node 출력. 데이터라 저장소에 넣지 않는다) ---
+odor_logs/
+
+# --- 에디터 / OS ---
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
