@@ -313,10 +313,10 @@ NH3 만 보정하려면 `config/mob_01.yaml` 의 `temp_comp: "NH3"`. 보정했�
 <!-- gen:consts FireStatus LEVEL_ -->
 | 상수 | 값 | 비트 | 뜻 |
 |---|---|---|---|
-| `LEVEL_NORMAL` | 0 |  | 정상: 주변보다 뜨거운 화소 없음. 녹색 LED |
-| `LEVEL_CAUTION` | 1 |  | 주의: 뜨거운 화소 1~2개 (국부 발열). 황색 LED |
+| `LEVEL_NORMAL` | 0 |  | 정상: 주변보다 뜨거운 화소도, 뜨거운 점 센서도 없음. 녹색 LED |
+| `LEVEL_CAUTION` | 1 |  | 주의: 뜨거운 화소 1~2개 (국부 발열), 또는 접촉 프로브나 적외선이 뜨거움. 황색 LED |
 | `LEVEL_WARNING` | 2 |  | 경고: 뜨거운 화소 3개 이상 (번지는 중). 적색 점멸, 부저 간헐 |
-| `LEVEL_DANGER` | 3 |  | 위험: 연기 또는 절대 한계 초과. 적색 상시, 부저 연속, 충전 차단 |
+| `LEVEL_DANGER` | 3 |  | 위험: 연기, 또는 화소나 점 센서가 절대 한계 초과. 적색 상시, 부저 연속, 충전 차단 |
 <!-- /gen -->
 
 <!-- gen:consts FireStatus FLAG_ -->
@@ -326,6 +326,8 @@ NH3 만 보정하려면 `config/mob_01.yaml` 의 `temp_comp: "NH3"`. 보정했�
 | `FLAG_AMG_INVALID` | 2 | bit1 | 열화상 읽기 실패 |
 | `FLAG_SHT_INVALID` | 4 | bit2 | 온습도 읽기 실패 (주변 온도 대신 화소 최저값 사용) |
 | `FLAG_ADC_INVALID` | 8 | bit3 | 연기 ADC 읽기 실패 |
+| `FLAG_PROBE_INVALID` | 16 | bit4 | 접촉 프로브(DS18B20) 중 못 읽은 것이 있음 |
+| `FLAG_IR_INVALID` | 32 | bit5 | 적외선 온도계(MLX90614) 읽기 실패 |
 | `FLAG_TIME_UNSYNCED` | 64 | bit6 | 시각을 믿을 수 없음 |
 | `FLAG_SIMULATED` | 2048 | bit11 | 가짜 데이터 |
 <!-- /gen -->
@@ -335,6 +337,11 @@ NH3 만 보정하려면 `config/mob_01.yaml` 의 `temp_comp: "NH3"`. 보정했�
 - `charge_allowed` 가 false 면 파워뱅크 충전 AC 라인(SSR)이 끊긴 상태입니다. 열화상을 10 초 넘게 못 읽어도 끊습니다.
 - `thermal_c` 는 8x8 화소를 행 우선으로 늘어놓은 것입니다. 0 번이 어느 모서리인지는 카메라 장착 방향에 따라 다릅니다.
 - `delta_c`, `abs_limit_c` 는 판정에 쓴 설정값입니다 (기본 8 ℃, 60 ℃. 정상 충전 기록으로 다시 정할 예정).
+- 점 센서(접촉 프로브 DS18B20 여러 개, 적외선 MLX90614)는 열화상이 못 보는 면과 작은 발열점을 보완합니다.
+  주변 + 기준 초과면 주의(1), 한계 이상이면 위험(3)이고 경고(2)는 만들지 않습니다. 기준은 감지기 설정
+  `probe_*`, `ir_*` (비우면 `delta_c`, `abs_limit_c` 와 같음). 값은 이 메시지에 없고 감지기의 CSV 기록에 있습니다.
+- 점 센서는 보조라 끊겨도 충전을 끊지 않습니다 (`FLAG_PROBE_INVALID`, `FLAG_IR_INVALID`, DeviceHealth 는 DEGRADED).
+  뜨거울 때 끊기면 그 단계에서 내려가지 않고 위험 래치도 풀리지 않습니다.
 
 ### 4.6 DeviceHealth
 
@@ -373,8 +380,8 @@ NH3 만 보정하려면 `config/mob_01.yaml` 의 `temp_comp: "NH3"`. 보정했�
 | bit0 (1) | Gravity NH3 | ADS1115 (전기화학 증폭 출력) | AMG8833 열화상 | LoRa 수신 포트 |
 | bit1 (2) | Gravity H2S | SGP41 | SHT31 | |
 | bit2 (4) | SGP30 | SHT31 | ADS1115 (MQ-2) | |
-| bit3 (8) | BME688 | PMS7003 | | |
-| bit4 (16) | TCA9548A 멀티플렉서 | DS3231 RTC | | |
+| bit3 (8) | BME688 | PMS7003 | DS18B20 접촉 프로브 (설정한 것 모두) | |
+| bit4 (16) | TCA9548A 멀티플렉서 | DS3231 RTC | MLX90614 적외선 | |
 | bit5 (32) | | EEPROM 보정값 | | |
 
 `supply_v` 는 이동형, 화재 감지기는 Pi5 의 5 V 입력 전압, 고정형은 VIN 분압 측정값입니다.
@@ -527,6 +534,14 @@ fire-detect --simulate overheat --speed 10 --ros                            # RO
 ---
 
 ## 10. 변경 내역
+
+### v0.2 추가 (2026-10-10, 화재 감지기 점 센서)
+
+**호환되는 변경 (필드는 그대로)**
+
+- FireStatus `flags` 에 bit4 `FLAG_PROBE_INVALID`(16), bit5 `FLAG_IR_INVALID`(32)
+- DeviceHealth `sensor_ok_mask` 의 ess_01 에 bit3 DS18B20 접촉 프로브, bit4 MLX90614 적외선
+- FireStatus 단계 설명에 점 센서 추가 (주의, 위험). 접촉 프로브, 적외선 온도를 메시지에 싣는 것은 다음 판에서 정함
 
 ### v0.2 (2026-10-09)
 
