@@ -1,0 +1,15 @@
+{
+  "type": "device_health",
+  "version": "0.2",
+  "stamp": "2026-10-10T05:12:33.120Z",
+  "device_id": "fix_01",
+  "state": 2,
+  "firmware": "fix_station 0.2.0",
+  "uptime_s": 86400,
+  "sensor_ok_mask": 63,
+  "error_count": 0,
+  "supply_v": 12.05,
+  "cpu_temp_c": null,
+  "rssi_dbm": -87,
+  "message": ""
+}

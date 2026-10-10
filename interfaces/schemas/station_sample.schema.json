@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/selim-drone-proj/moving-ver/interfaces/schemas/station_sample.schema.json",
+  "title": "StationSample",
+  "description": "고정형 관측소 1회 보고 (fix_01 ~ fix_04) 관측소(Mega2560)가 1 초마다 재서 avg_window_s 동안 평균한 값을 LoRa 로 보내고, 지상국 게이트웨이(lora_gateway)가 받아서 /station/<id>/sample 로 발행한다. 이동형의 OdorSample 과 짝을 이룬다: 위치가 드론 상태 대신 고정 설치 좌표.",
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "station_sample",
+      "description": "기록 종류"
+    },
+    "version": {
+      "const": "0.2",
+      "description": "규격 버전"
+    },
+    "stamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$",
+      "description": "UTC 시각, ISO 8601, 밀리초까지 (예: 2026-10-10T05:12:33.120Z)"
+    },
+    "device_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*_[0-9]{2}$",
+      "description": "장비 ID. 소문자 + 밑줄 + 두 자리 번호 (mob_01, fix_01, ess_01, gw_01, octo_01)"
+    },
+    "latitude": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "deg, WGS84. 설치 좌표 (게이트웨이 stations.yaml)"
+    },
+    "longitude": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "deg"
+    },
+    "altitude_msl": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "m"
+    },
+    "sampling_mode": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "enum": [
+        0,
+        1
+      ],
+      "description": "MODE_DIFFUSION 또는 MODE_CHAMBER | 0=DIFFUSION, 1=CHAMBER"
+    },
+    "avg_window_s": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "몇 초 동안의 평균인지 (보통 60)"
+    },
+    "gas": {
+      "allOf": [
+        {
+          "$ref": "gas_reading.schema.json#/$defs/body"
+        }
+      ],
+      "description": "측정값. gas.header 는 위 header 와 같다. 품질은 gas.flags"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "description": "관측소 패킷 순번. 건너뛰면 그만큼 손실"
+    },
+    "rssi_dbm": {
+      "type": "integer",
+      "minimum": -32768,
+      "maximum": 32767,
+      "description": "게이트웨이 수신 세기 dBm. 0 = 모름"
+    },
+    "received": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$",
+      "description": "게이트웨이가 받은 시각(UTC)"
+    }
+  },
+  "required": [
+    "type",
+    "version",
+    "stamp",
+    "device_id",
+    "latitude",
+    "longitude",
+    "altitude_msl",
+    "sampling_mode",
+    "avg_window_s",
+    "gas",
+    "seq",
+    "rssi_dbm",
+    "received"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "body": {
+      "type": "object",
+      "properties": {
+        "stamp": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$",
+          "description": "UTC 시각, ISO 8601, 밀리초까지 (예: 2026-10-10T05:12:33.120Z)"
+        },
+        "device_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*_[0-9]{2}$",
+          "description": "장비 ID. 소문자 + 밑줄 + 두 자리 번호 (mob_01, fix_01, ess_01, gw_01, octo_01)"
+        },
+        "latitude": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "deg, WGS84. 설치 좌표 (게이트웨이 stations.yaml)"
+        },
+        "longitude": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "deg"
+        },
+        "altitude_msl": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "m"
+        },
+        "sampling_mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "enum": [
+            0,
+            1
+          ],
+          "description": "MODE_DIFFUSION 또는 MODE_CHAMBER | 0=DIFFUSION, 1=CHAMBER"
+        },
+        "avg_window_s": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "몇 초 동안의 평균인지 (보통 60)"
+        },
+        "gas": {
+          "allOf": [
+            {
+              "$ref": "gas_reading.schema.json#/$defs/body"
+            }
+          ],
+          "description": "측정값. gas.header 는 위 header 와 같다. 품질은 gas.flags"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "관측소 패킷 순번. 건너뛰면 그만큼 손실"
+        },
+        "rssi_dbm": {
+          "type": "integer",
+          "minimum": -32768,
+          "maximum": 32767,
+          "description": "게이트웨이 수신 세기 dBm. 0 = 모름"
+        },
+        "received": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$",
+          "description": "게이트웨이가 받은 시각(UTC)"
+        }
+      },
+      "required": [
+        "stamp",
+        "device_id",
+        "latitude",
+        "longitude",
+        "altitude_msl",
+        "sampling_mode",
+        "avg_window_s",
+        "gas",
+        "seq",
+        "rssi_dbm",
+        "received"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
