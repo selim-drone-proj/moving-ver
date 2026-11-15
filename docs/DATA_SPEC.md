@@ -469,14 +469,16 @@ time_unix,time_iso,p00,p01,...,p63
 
 ---
 
-## 8. LoRa 패킷 v1 (고정형 -> 게이트웨이)
+## 8. LoRa 패킷 v1 (고정형, 이동형 -> 게이트웨이)
 
 자세한 바이트 배치와 시험 벡터는 `stable-ver/protocol/LORA_PACKET.md`. 요약만 적습니다.
 
 - E220 투명 모드, 9600 bps UART. 리틀 엔디언.
 - 프레임: `A5 5A` + version(1) + type + station 번호 + seq(u16) + time(u32 epoch) + len + 페이로드 + CRC(u16)
 - CRC-16/CCITT-FALSE (다항식 0x1021, 초기값 0xFFFF), version 부터 페이로드 끝까지. `"123456789"` -> `0x29B1`
-- type `0x01` SAMPLE (페이로드 38 B, 프레임 52 B), `0x02` HEALTH (16 B, 프레임 30 B), `0x03` 예약 (이동형용, 11장)
+- type `0x01` SAMPLE (페이로드 38 B, 프레임 52 B), `0x02` HEALTH (16 B, 프레임 30 B), `0x03` MOBILE (39 B, 프레임 53 B)
+- MOBILE 은 이동형 `lora_uplink_node` 가 `period_s` (기본 2 초)마다 최신 `odor_sample` 의 위치, 가스, BME688 값을 싣습니다.
+  게이트웨이가 `odor_sample` 기록으로 되돌립니다 (자세, 비행 모드, 원신호 등 싣지 않은 값은 null)
 - 값은 정수로 줄여 싣습니다: NH3 0.01 ppm, H2S 0.001 ppm, 온도 0.01 ℃, 습도 0.01 %, 기압 0.1 hPa, 나머지 1 단위
 - 관측소는 `(번호 x 7) mod 60` 초에 보냅니다 (fix_01 7 초, fix_02 14 초 ...). 같은 채널에서 겹치지 않게.
 
@@ -562,7 +564,7 @@ YoungHyun1884/drone_stink 의 DroneState, GasReading(8 필드), OdorSample(3 필
 | 고정형 설치 좌표 | `stations.yaml` 에 임시 좌표 | 설치 후 실측 좌표 입력 |
 | ME3-NH3 감도 | 미설정 -> 고정형 `nh3_ppm` 이 null (원신호 `nh3_raw` 만 있음) | 센서 라벨 또는 성적서의 nA/ppm 을 `set nh3_sens` 로 입력 |
 | 110-303 감도 | 명목값 200 nA/ppm (개체 편차 ±37 %) | 라벨 값으로 교체 |
-| 이동형 LoRa | 결선 도면에는 E220 이 있으나 소프트웨어는 ROS 2 네트워크와 로컬 파일로 보냄 | 쓸 거면 패킷 type `0x03` (위치 포함 요약, 10 초마다) 을 정의 |
+| 이동형 LoRa | type `0x03` MOBILE 정의, `lora_uplink_node` (기본 2 초) | 송신 주기, 고정형과 채널 분리 여부, 공중 속도 (비행 반경 시험 후) |
 | Pi5 시각 | NTP 가 없으면 `TIME_UNSYNCED` | 현장에서 쓸 시각원 (Pi5 RTC 배터리, GPS 시각, 지상국 NTP) |
 | 화재 판정 기준값 | delta_c 8 ℃, abs_limit_c 60 ℃, smoke_dv 0.3 V (임시) | 정상 충전 기록 며칠 -> `fire_detect/tools/analyze_log.py` |
 | Gravity 온도 보정 | 끔 | NH3 만 켤지 |

@@ -46,3 +46,10 @@ csv_logger_node:
   ros__parameters:
     log_dir: ~/odor_logs
     write_jsonl: true
+
+lora_uplink_node:            # uplink:=lora 일 때만
+  ros__parameters:
+    port: /dev/ttyUSB0       # USB-TTL. Pi5 추가 UART 면 /dev/ttyAMA2 등 (README 3장)
+    baud: 9600               # E220 UART 설정과 같게
+    period_s: 2.0            # 송신 주기. 공중 속도, 채널 공유 여부에 맞춰 정한다 (LORA_PACKET.md 3-2)
+    station: 1               # mob_01 -> 1. 지상국에서 mob_01 / octo_01 로 풀린다
