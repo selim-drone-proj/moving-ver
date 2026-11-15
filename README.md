@@ -56,6 +56,7 @@ ros2 topic echo --once /odor/sample
 | `gas_sensor_node` | 아두이노 모듈의 시리얼 한 줄 (v0.1 방식, 남겨 둠) | (시리얼) | `/odor/gas` |
 | `odor_sample_node` | 가스 값마다 그 순간 드론 상태를 붙임 | `/drone/state`, `/odor/gas` | `/odor/sample` |
 | `csv_logger_node` | CSV 와 JSONL 로 로컬 저장 | `/odor/sample` | (파일) |
+| `lora_uplink_node` | 최신 샘플을 2 초마다 LoRa 요약 패킷(type 0x03)으로 E220 에 씀 (`uplink:=lora`) | `/odor/sample` | (E220 -> 지상국) |
 | `fake_fc_node`, `fake_gas_node` | 하드웨어 없이 같은 토픽을 가짜로 | | `/drone/state`, `/odor/gas` |
 
 v0.1 은 ROS 기능을 pub/sub 와 타이머만 썼습니다. v0.2 는 여기에 **파라미터**만 더해 장비 ID, 센서 주소를
@@ -87,6 +88,15 @@ v0.1 은 ROS 기능을 pub/sub 와 타이머만 썼습니다. v0.2 는 여기에
   `SR2_POSITION=10`, `SR2_EXTRA1=10`, `SR2_EXTRA2=5`, `SR2_EXT_STAT=2`, `SR2_EXTRA3=2`, `SR2_RAW_SENS=0`.
 - 권한: `sudo usermod -aG dialout,i2c $USER` 후 재로그인.
 
+**E220-900T22D 연결** (`uplink:=lora`. 지상국은 stable-ver `odor-gateway` 가 받음)
+
+- `uart0` 은 Pixhawk 가 쓰므로 E220 은 **USB-TTL(CP2102) 로 연결**하는 것을 기본으로 합니다 (지상국 게이트웨이와 같은 방식) -> `/dev/ttyUSB0`.
+  E220 TXD -> USB-TTL RX, E220 RXD -> USB-TTL TX, GND 공통, VCC 5 V. Pi5 의 추가 UART 를 쓰려면 `config.txt` 의 overlay 와 핀을
+  `dtoverlay -h uart2-pi5` 로 확인한 뒤 `port` 를 바꿉니다 (실물 미확인).
+- M0, M1 은 GND (투명 모드). 채널, 공중 속도, UART 9600 bps 는 지상국 수신 모듈과 같게 미리 설정합니다 (`stable-ver/protocol/LORA_PACKET.md` 1장).
+- 확인: `ros2 launch odor_drone real.launch.py uplink:=lora` 뒤 지상국에서 `odor-gateway --port /dev/ttyUSB0 --out ~/odor_logs`
+  에 `mob_01 seq=...` 줄이 2 초마다 나오는지 봅니다.
+
 ## 4. 설치 (RPi5, Ubuntu 24.04 + ROS 2 Jazzy)
 
 ```bash
@@ -108,6 +118,8 @@ ros2 launch odor_drone real.launch.py                       # 실기체: mavros 
 ros2 launch odor_drone real.launch.py fc:=fake              # 책상에서 센서만 (위치는 가짜 원 비행)
 ros2 launch odor_drone real.launch.py gas:=serial           # 아두이노 센서 모듈 (v0.1 방식)
 ros2 launch odor_drone real.launch.py fcu_url:=serial:///dev/ttyACM0:115200 mavros_launch:=px4.launch
+ros2 launch odor_drone real.launch.py uplink:=lora              # E220 으로 지상국에 요약 송신
+ros2 launch odor_drone real.launch.py fc:=fake gas:=fake uplink:=lora   # 책상에서 LoRa 링크만 시험
 ```
 
 센서 주소, 채널, ID, 로그 폴더는 `ros2_ws/src/odor_drone/config/mob_01.yaml`.

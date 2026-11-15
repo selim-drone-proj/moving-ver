@@ -5,6 +5,7 @@
     ros2 launch odor_drone real.launch.py fc:=fake             # FC 없이 책상에서 센서만 시험
     ros2 launch odor_drone real.launch.py gas:=serial          # 아두이노 센서 모듈(시리얼 한 줄 방식)
     ros2 launch odor_drone real.launch.py fcu_url:=serial:///dev/ttyACM0:115200
+    ros2 launch odor_drone real.launch.py uplink:=lora        # E220 으로 지상국에 요약 송신 (2 초마다)
 
 Pixhawk 연결 포트는 fcu_url 로 바꾼다.
   - RPi5 GPIO UART(핀 8, 10) <-> Pixhawk TELEM2 : serial:///dev/ttyAMA0:921600
@@ -30,8 +31,9 @@ def _nodes(context):
     fc = LaunchConfiguration("fc").perform(context)
     gas = LaunchConfiguration("gas").perform(context)
     params = LaunchConfiguration("params").perform(context)
-    if fc not in FC_NODES or gas not in GAS_NODES:
-        raise RuntimeError(f"fc 는 {list(FC_NODES)}, gas 는 {list(GAS_NODES)} 중 하나")
+    uplink = LaunchConfiguration("uplink").perform(context)
+    if fc not in FC_NODES or gas not in GAS_NODES or uplink not in ("none", "lora"):
+        raise RuntimeError(f"fc 는 {list(FC_NODES)}, gas 는 {list(GAS_NODES)}, uplink 는 none | lora 중 하나")
 
     def node(name):
         return Node(package="odor_drone", executable=name, name=name, output="screen", parameters=[params])
@@ -49,6 +51,8 @@ def _nodes(context):
         node("odor_sample_node"),   # 위 둘      -> /odor/sample
         node("csv_logger_node"),    # /odor/sample -> CSV, JSONL
     ]
+    if uplink == "lora":
+        actions.append(node("lora_uplink_node"))   # /odor/sample -> E220 -> 지상국
     return actions
 
 
@@ -59,6 +63,7 @@ def generate_launch_description():
         DeclareLaunchArgument("gas", default_value="i2c", description="i2c | serial | fake"),
         DeclareLaunchArgument("fcu_url", default_value="serial:///dev/ttyAMA0:921600"),
         DeclareLaunchArgument("mavros_launch", default_value="apm.launch", description="ArduPilot. PX4 면 px4.launch"),
+        DeclareLaunchArgument("uplink", default_value="none", description="none | lora"),
         DeclareLaunchArgument("params", default_value=default_params, description="파라미터 파일"),
         OpaqueFunction(function=_nodes),
     ])
