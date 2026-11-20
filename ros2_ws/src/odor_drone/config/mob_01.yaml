@@ -1,8 +1,10 @@
 # 이동형 악취 센서 mob_01 (드론 octo_01 탑재) 설정
 # real.launch.py, fake.launch.py 가 읽는다. 바꾼 뒤 colcon build 다시 (또는 params:=<이 파일 경로>)
 #
-# I2C 배치 (TCA9548A 0x70 채널)
-#   ch0 Gravity NH3 0x74 | ch1 Gravity H2S 0x74 | ch2 SGP30 0x58 | ch3 BME688 0x76
+# I2C 배치 (TCA9548A 0x70 채널, 2026-11-20 실물 배선 기준)
+#   ch5 Gravity NH3 0x74 | ch6 Gravity H2S 0x74 | ch3 SGP30 0x58 | ch2 BME688 0x77
+#   NH3 보드는 VCC 5V 필수 (3.3V 면 BME688 히터가 돌 때 빈 응답). H2S 는 3.3V 정상
+#   I2C 는 10 kHz (config.txt dtparam=i2c_arm_baudrate=10000). 100 kHz 에서 Gravity 가 버스를 붙잡고 멈춤
 # 센서가 빠져 있으면 *_enabled: false. Gravity 주소를 딥스위치로 다르게 했다면 tca_address: -1
 
 /**:
@@ -18,15 +20,15 @@ gas_i2c_node:
     tca_address: 0x70
     nh3_enabled: true
     nh3_address: 0x74
-    nh3_channel: 0
+    nh3_channel: 5
     h2s_enabled: true
     h2s_address: 0x74
-    h2s_channel: 1
+    h2s_channel: 6
     sgp30_enabled: true
-    sgp30_channel: 2
+    sgp30_channel: 3
     bme688_enabled: true
-    bme688_address: 0x76     # 결선 도면 기준. 안 되면 0x77 도 자동으로 시도
-    bme688_channel: 3
+    bme688_address: 0x77     # 실물 보드 기준. 안 되면 0x76 도 자동으로 시도
+    bme688_channel: 2
     gravity_settle_s: 0.1
     warmup_s: 180.0
     temp_comp: ""            # 제조사 온도 보정. "NH3" 처럼 적으면 적용 (DATA_SPEC.md 4.2 주의 사항)
@@ -49,7 +51,7 @@ csv_logger_node:
 
 lora_uplink_node:            # uplink:=lora 일 때만
   ros__parameters:
-    port: /dev/ttyUSB0       # USB-TTL. Pi5 추가 UART 면 /dev/ttyAMA2 등 (README 3장)
+    port: /dev/ttyAMA2       # Pi5 uart2 직결 (GPIO4 TX=7번, GPIO5 RX=29번). USB-TTL 이면 /dev/ttyUSB0
     baud: 9600               # E220 UART 설정과 같게
     period_s: 2.0            # 송신 주기. 공중 속도, 채널 공유 여부에 맞춰 정한다 (LORA_PACKET.md 3-2)
     station: 1               # mob_01 -> 1. 지상국에서 mob_01 / octo_01 로 풀린다
