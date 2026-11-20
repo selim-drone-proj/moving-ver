@@ -55,3 +55,10 @@ lora_uplink_node:            # uplink:=lora 일 때만
     baud: 9600               # E220 UART 설정과 같게
     period_s: 2.0            # 송신 주기. 공중 속도, 채널 공유 여부에 맞춰 정한다 (LORA_PACKET.md 3-2)
     station: 1               # mob_01 -> 1. 지상국에서 mob_01 / octo_01 로 풀린다
+
+http_uplink_node:            # uplink:=http 또는 both 일 때만. 토큰은 여기 적지 말고 export ODOR_INGEST_TOKEN=...
+  ros__parameters:
+    url: ""                  # 관제 서버 적재 API. 예: http://<서버>:8090/api/ingest (주소는 소프트웨어 팀에서 받는다)
+    dry_run: true            # true = 서버가 검증만 하고 저장 안 함. 거절 0 건을 확인한 뒤 false 로
+    period_s: 5.0            # spool 을 묶어 보내는 주기
+    spool_dir: ~/odor_logs/uplink   # forward_spool.jsonl (못 보낸 것), forward_rejected.jsonl (서버가 거절한 것)

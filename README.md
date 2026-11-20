@@ -57,6 +57,7 @@ ros2 topic echo --once /odor/sample
 | `odor_sample_node` | 가스 값마다 그 순간 드론 상태를 붙임 | `/drone/state`, `/odor/gas` | `/odor/sample` |
 | `csv_logger_node` | CSV 와 JSONL 로 로컬 저장 | `/odor/sample` | (파일) |
 | `lora_uplink_node` | 최신 샘플을 2 초마다 LoRa 요약 패킷(type 0x03)으로 E220 에 씀 (`uplink:=lora`) | `/odor/sample` | (E220 -> 지상국) |
+| `http_uplink_node` | 샘플마다 Wi-Fi 로 관제 서버 `/api/ingest` 에 보냄. 끊기면 쌓았다가 다시 (`uplink:=http`, 둘 다는 `uplink:=both`) | `/odor/sample` | (Wi-Fi -> 관제 서버) |
 | `fake_fc_node`, `fake_gas_node` | 하드웨어 없이 같은 토픽을 가짜로 | | `/drone/state`, `/odor/gas` |
 
 v0.1 은 ROS 기능을 pub/sub 와 타이머만 썼습니다. v0.2 는 여기에 **파라미터**만 더해 장비 ID, 센서 주소를
@@ -129,6 +130,29 @@ E220 의 신호선은 3.3 V 라 레벨 컨버터가 필요 없습니다. USB-TTL
   `sudo gpioget -B pull-down gpiochip4 5` 가 0 이면 E220 이 꺼졌거나 TXD 가 29번에 없습니다
   (gpioget 은 핀을 UART 에서 빼앗으므로 확인 뒤 재부팅).
 
+**Wi-Fi 로 관제 서버에 보내기** (`uplink:=http`, LoRa 와 같이 쓰려면 `uplink:=both`. 실물 미검증)
+
+LoRa 는 요약(2 초마다 1 건)만 지상국에 보내고, Wi-Fi 는 1 Hz 샘플 전부를 관제 서버(odor_system)에 바로 보냅니다.
+둘은 서로 독립이라 함께 띄워도 됩니다. 변환 규칙은 지상국 게이트웨이와 같습니다
+(`odor_drone/server_forward.py` 는 stable-ver `gateway/odor_gateway/forward.py` 를 옮겨 온 것).
+
+1. `config/mob_01.yaml` 의 `http_uplink_node.url` 에 서버 주소를 적습니다 (예: `http://<서버>:8090/api/ingest`. 주소는 소프트웨어 팀에서 받음).
+2. 토큰은 파일에 적지 않고 환경변수로 줍니다.
+   ```bash
+   export ODOR_INGEST_TOKEN='<소프트웨어 팀에서 받은 장비 토큰>'
+   ros2 launch odor_drone real.launch.py uplink:=both
+   ```
+3. 처음에는 `dry_run: true`(기본값) 로 둡니다. 서버가 검증만 하고 저장하지 않습니다. 60 초마다 나오는 로그
+   `fwd_sent=... fwd_accepted=... fwd_rejected=... fwd_fail=... fwd_pending=...` 에서 `fwd_rejected=0`, `fwd_fail` 이 늘지 않으면
+   `dry_run: false` 로 바꿉니다. 서버가 `ODOR_DATA_MODE=live` 여야 실제로 저장됩니다.
+4. 결과 파일 (`spool_dir`, 기본 `~/odor_logs/uplink/`):
+   `forward_spool.jsonl` 아직 못 보낸 것 (Wi-Fi 가 끊긴 동안 쌓이고, 다시 붙거나 노드를 다시 켜면 보냄),
+   `forward_rejected.jsonl` 서버가 거절한 것과 이유.
+   - `fwd_err=HTTP 403` 서버에 토큰이 설정되지 않음, `HTTP 401` 토큰이 틀림, `연결 실패` 주소나 Wi-Fi 문제.
+- 서버로 가는 값: `odor`(DX-01, NH3, H2S 를 ppb 로, 위경도, `alt_m` = 이륙점 기준 고도) + `battery`(DRN-01, FC 측정 전압).
+  TVOC, eCO2, BME688 값은 서버에 받을 칸이 없어 보내지 않습니다 (Pi 의 `~/odor_logs/*.jsonl` 에는 모두 남음).
+- 예열 중(WARMUP) 가스 값과 가짜 데이터(`gas:=fake`, SIMULATED)는 보내지 않습니다. `dry_run: true` 일 때만 형식 확인용으로 보냅니다.
+
 ## 4. 설치 (RPi5, Ubuntu 24.04 + ROS 2 Jazzy)
 
 ```bash
@@ -152,6 +176,8 @@ ros2 launch odor_drone real.launch.py gas:=serial           # 아두이노 센�
 ros2 launch odor_drone real.launch.py fcu_url:=serial:///dev/ttyACM0:115200 mavros_launch:=px4.launch
 ros2 launch odor_drone real.launch.py uplink:=lora              # E220 으로 지상국에 요약 송신
 ros2 launch odor_drone real.launch.py fc:=fake gas:=fake uplink:=lora   # 책상에서 LoRa 링크만 시험
+ros2 launch odor_drone real.launch.py uplink:=http              # Wi-Fi 로 관제 서버에 전송 (3장)
+ros2 launch odor_drone real.launch.py uplink:=both              # LoRa + Wi-Fi
 ```
 
 센서 주소, 채널, ID, 로그 폴더는 `ros2_ws/src/odor_drone/config/mob_01.yaml`.
