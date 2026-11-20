@@ -29,6 +29,7 @@ setup(
             "odor_sample_node = odor_drone.odor_sample_node:main",
             "csv_logger_node = odor_drone.csv_logger_node:main",
             "lora_uplink_node = odor_drone.lora_uplink_node:main",
+            "http_uplink_node = odor_drone.http_uplink_node:main",
             "fake_fc_node = odor_drone.fake_fc_node:main",
             "fake_gas_node = odor_drone.fake_gas_node:main",
         ],
